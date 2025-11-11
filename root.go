@@ -21,6 +21,12 @@ type OSSignal struct {
 	root shutdown
 }
 
+// 操作系统信号处理任务
+type OSSignal1 struct {
+	ChannelTask
+	root shutdown
+}
+
 func (o *OSSignal) Start() error {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
