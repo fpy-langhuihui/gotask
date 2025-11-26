@@ -523,7 +523,7 @@ func main() {
 	fmt.Println("  limit      - Number of results per page (default: 50)")
 	fmt.Println("  offset     - Number of results to skip (default: 0)")
 	s := http.Server{
-		Addr:    ":8082",
+		Addr:    ":8083",
 		Handler: r,
 	}
 	server.taskManager.OnStop(func() {
