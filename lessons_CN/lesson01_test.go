@@ -1,6 +1,7 @@
 package lessons
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -29,6 +30,44 @@ func (t *MyFirstTask) Start() error {
 	return nil
 }
 
+func (t *MyFirstTask) Run() error {
+	// 用于捕获异常,并终止执行任务逻辑
+	done := make(chan error, 1)
+	t.OnStop(func() {
+		done <- t.StopReason()
+	})
+
+	// 执行任务逻辑
+	defer func() {
+		if r := recover(); r != nil {
+			t.Error("Run方法发生panic", "recover", r)
+		}
+	}()
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	// 测试开启新的携程,任务终止后是否停止
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				fmt.Println(" run 中新go run 的Hello, world1111111!")
+			}
+		}
+	}()
+
+	// 业务处理逻辑及终止任务逻辑
+	for {
+		select {
+		case <-ticker.C:
+			fmt.Println("Hello, world!")
+		case err := <-done:
+			return err
+		}
+	}
+}
+
 // Dispose 任务清理方法
 func (t *MyFirstTask) Dispose() {
 	t.Log("任务清理", t.Name())
@@ -42,11 +81,38 @@ func TestLesson01_1(t *testing.T) {
 
 	// 创建第一个任务
 	myTask := &MyFirstTask{T: t}
+	// task stop后执行
+	myTask.OnStop(func() {
+		fmt.Println("OnStop")
+	})
 
 	//TODO: 取消下面的注释来完成任务添加
-	// root.AddTask(myTask)
+	root.AddTask(myTask)
+	go func() {
+		time.Sleep(2 * time.Second)
+		t, ok := root.Get(myTask.ID)
+		if !ok {
+			fmt.Println("task not found")
+			return
+		}
 
-	time.Sleep(1 * time.Second) // 等待任务启动
+		if t.GetState() == task.TASK_STATE_DISPOSED {
+			fmt.Println("task already disposed")
+			return
+		}
+
+		t.Stop(task.ErrTaskComplete)
+		if t.IsStopped() {
+			fmt.Println("task stopped")
+		} else {
+			fmt.Println("task no stopped")
+		}
+		return
+	}()
+
+	myTask.WaitStopped()
+
+	time.Sleep(2 * time.Second) // 等待任务启动
 
 	if myTask.GetState() == task.TASK_STATE_STARTED {
 		t.Log("Lesson 1-1 测试通过：基础Task使用")
@@ -61,11 +127,11 @@ type MyFirstTask2 struct {
 }
 
 // Run 任务运行方法，TODO: 取消注释来完成任务运行
-// func (t *MyFirstTask2) Run() error {
-// 	t.Info("任务正在运行", "name", t.Name())
-// 	time.Sleep(2 * time.Second)
-// 	return nil
-// }
+func (t *MyFirstTask2) Run() error {
+	t.Info("任务正在运行", "name", t.Name())
+	time.Sleep(2 * time.Second)
+	return nil
+}
 
 // TestLesson01_2 Run方法的使用
 func TestLesson01_2(t *testing.T) {

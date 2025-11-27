@@ -78,7 +78,6 @@ func (lrt *LongRunningTask) Tick(any) {
 	lrt.counter++
 	lrt.SetDescription("counter", fmt.Sprintf("%d", lrt.counter))
 	lrt.SetDescription("last_tick", time.Now().Format("15:04:05"))
-
 	// 模拟偶尔创建子任务
 	if lrt.counter%5 == 0 {
 		childTask := NewDemoTask(
